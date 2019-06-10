@@ -4,6 +4,7 @@ import android.app.Service;
 
 import com.example.pmsumail.model.Message;
 import com.example.pmsumail.model.requestbody.MessageCreateRequestBody;
+import com.example.pmsumail.model.requestbody.MessageReadRequestBody;
 
 import java.util.List;
 
@@ -36,10 +37,10 @@ public interface MessageService {
     @DELETE(ServiceUtils.MESSAGEDELETE)
     Call<Message> deleteMessage(@Path("id") int id);
 
+    @POST(ServiceUtils.MESSAGEREAD)
+    Call<Message> editMessage(@Body MessageReadRequestBody messageRead);
 
     @POST(ServiceUtils.MESSAGEADD)
     Call<Message> createMessage(@Body MessageCreateRequestBody messageCreateRequestBody);
-
-
 
 }

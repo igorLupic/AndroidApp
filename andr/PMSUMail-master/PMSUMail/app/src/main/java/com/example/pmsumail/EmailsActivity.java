@@ -1,12 +1,19 @@
 package com.example.pmsumail;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
@@ -27,6 +34,7 @@ import com.example.pmsumail.adapters.EmailListAdapter;
 import com.example.pmsumail.model.Account;
 import com.example.pmsumail.model.Message;
 import com.example.pmsumail.model.NavItem;
+import com.example.pmsumail.model.requestbody.MessageReadRequestBody;
 import com.example.pmsumail.service.AccountService;
 import com.example.pmsumail.service.MessageService;
 import com.example.pmsumail.service.ServiceUtils;
@@ -61,6 +69,10 @@ public class EmailsActivity extends AppCompatActivity {
     private ArrayList<NavItem> mNavItems = new ArrayList<NavItem>();
 
     private EmailListAdapter emailListAdapter;
+
+    private final String CHANNEL_ID = "my_channel";
+    private final int NOTIFICATION_ID = 001;
+    private int counter = 0;
 
 
     @Override
@@ -157,14 +169,83 @@ public class EmailsActivity extends AppCompatActivity {
         call.enqueue(new Callback<List<Message>>() {
             @Override
             public void onResponse(Call<List<Message>> call, Response<List<Message>> response) {
+                List<Message> messages1 = response.body();
+
+                if (messages1 == null) {
+                    Toast.makeText(EmailsActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show();
+                } else {
+
+                    messages = messages1;
+
+                    final NotificationCompat.Builder builder = new NotificationCompat.Builder(EmailsActivity.this, CHANNEL_ID);
+                    for (Message m1 : messages) {
+                        if (!m1.isMessageRead()) {
+                            counter++;
+                            if (counter <= 1) {
+                                Intent intent = new Intent(EmailsActivity.this, EmailActivity.class);
+                                Bundle bundle = new Bundle();
+                                bundle.putParcelable("messages", m1);
+                                intent.removeExtra("messages");
+                                intent.putExtras(bundle);
+
+                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                final PendingIntent intentPending = PendingIntent.getActivity(EmailsActivity.this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+                                builder.setSmallIcon(R.drawable.notification);
+                                builder.setContentTitle(m1.getFrom());
+
+
+                                builder.setContentText(m1.getSubject());
+                                builder.setPriority(NotificationCompat.PRIORITY_HIGH);
+                                builder.setContentIntent(intentPending);
+                                builder.setAutoCancel(true);
+                                builder.build().flags |= Notification.FLAG_AUTO_CANCEL;
+
+                                NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(EmailsActivity.this);
+                                notificationManagerCompat.notify(NOTIFICATION_ID, builder.build());
+                            } else {
+
+                                Intent intent = new Intent(EmailsActivity.this, EmailsActivity.class);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                final PendingIntent intentPending = PendingIntent.getActivity(EmailsActivity.this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+                                builder.setSmallIcon(R.drawable.notification);
+                                builder.setContentText("You have" + " " + counter + " " + "new mails");
+                                builder.setContentTitle(m1.getFrom() + " : " + m1.getSubject());
+                                builder.setPriority(NotificationCompat.PRIORITY_HIGH);
+                                builder.setContentIntent(intentPending);
+                                builder.setAutoCancel(true);
+                                builder.build().flags |= Notification.FLAG_AUTO_CANCEL;
+
+                                NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(EmailsActivity.this);
+                                notificationManagerCompat.notify(NOTIFICATION_ID, builder.build());
+                            }
+                        }
+                    }
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    CharSequence name = "Message notification";
+                    String description = "Include all message notifications";
+
+                    int importance = NotificationManager.IMPORTANCE_HIGH;
+                    NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, name, importance);
+
+                    notificationChannel.setDescription(description);
+
+                    NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                    notificationManager.createNotificationChannel(notificationChannel);
+                }
+
 
                 if (response.isSuccessful()) {
                     messages = response.body();
 
                     //uzeti iz shared prefrences da li je selektovano ascending ili descending
                     //ako je ascending staviti true ako nije staviti false
-                    listView.setAdapter(new EmailListAdapter(EmailsActivity.this,
-                            sortedListOfMessages(messages, true)));
+                    //listView.setAdapter(new EmailListAdapter(EmailsActivity.this,
+                      //      sortedListOfMessages(messages, true)));
+                    listView.setAdapter(new EmailListAdapter(EmailsActivity.this, messages));
                 }
             }
 
@@ -189,9 +270,8 @@ public class EmailsActivity extends AppCompatActivity {
             public void onFailure(Call callAcc, Throwable t) {
                 Toast.makeText(getApplicationContext(), t.getMessage(), Toast.LENGTH_SHORT).show();
             }
+
         });
-
-
 
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -199,52 +279,83 @@ public class EmailsActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 
                 message = messages.get(i);
-                Intent intent = new Intent(EmailsActivity.this, EmailActivity.class);
-                intent.putExtra("Message", message);
-                startActivity(intent);
 
-                messageService = ServiceUtils.messageService;
-                Call<Message> call = messageService.getMessage(message.getId());
+                if (!message.isMessageRead()) {
+                    MessageService service = ServiceUtils.messageService;
 
-                call.enqueue(new Callback<Message>() {
-                    @Override
-                    public void onResponse(Call<Message> call, Response<Message> response) {
 
-                        if (response.isSuccessful()) {
-                            message = response.body();
-                            Intent intent = new Intent(EmailsActivity.this, EmailActivity.class);
-                            intent.putExtra("Message", new Gson().toJson(message));
+                    Call<Message> call = service.editMessage(new MessageReadRequestBody(message.getId()));
 
-                            startActivity(intent);
+                    call.enqueue(new Callback<Message>() {
+                        @Override
+                        public void onResponse(Call<Message> call, Response<Message> response) {
+                            startMessage();
+
                         }
-                    }
 
-                    @Override
-                    public void onFailure(Call<Message> call, Throwable t) {
-                        Toast.makeText(getApplicationContext(), t.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
+                        @Override
+                        public void onFailure(Call<Message> call, Throwable t) {
+                        }
+                    });
+                } else {
+                    startMessage();
+
+                }
 
             }
+
+
         });
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(EmailsActivity.this);
 
         consultPreferences();
+
     }
 
 
+
+    private void startMessage() {
+        Intent intent = new Intent(EmailsActivity.this, EmailActivity.class);
+        intent.putExtra("Message", message);
+        startActivity(intent);
+
+        messageService = ServiceUtils.messageService;
+        Call<Message> call = messageService.getMessage(message.getId());
+
+        call.enqueue(new Callback<Message>() {
+            @Override
+            public void onResponse(Call<Message> call, Response<Message> response) {
+
+                if (response.isSuccessful()) {
+                    message = response.body();
+                    Intent intent = new Intent(EmailsActivity.this, EmailActivity.class);
+                    intent.putExtra("Message", new Gson().toJson(message));
+
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Message> call, Throwable t) {
+                Toast.makeText(getApplicationContext(), t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+    }
 
     private void consultPreferences() {
         sortMessages = sharedPreferences.getBoolean(getString(R.string.pref_sort_messages_by_date_key_list_asc), false);
         if (sortMessages) {
             sortDateAsc();
-        }
-        else{
+        } else {
             sortDateDesc();
         }
 
     }
-    private void sortDateAsc(){
+
+    private void sortDateAsc() {
         Call<List<Message>> callMessage = messageService.sortMessagesAsc();
 
         callMessage.enqueue(new Callback<List<Message>>() {
@@ -263,7 +374,7 @@ public class EmailsActivity extends AppCompatActivity {
         });
     }
 
-    private void sortDateDesc(){
+    private void sortDateDesc() {
         Call<List<Message>> callMessage = messageService.sortMessagesDesc();
 
         callMessage.enqueue(new Callback<List<Message>>() {
@@ -343,10 +454,10 @@ public class EmailsActivity extends AppCompatActivity {
             sharedPreferences.edit().clear().commit();
             startActivity(ite);
 
-        }else if (position == 1) {
+        } else if (position == 1) {
             Intent settingsIntent = new Intent(this, SettingsActivity.class);
             startActivity(settingsIntent);
-           // finish();
+            // finish();
         }
         mDrawerList.setItemChecked(position, true);
         setTitle(mNavItems.get(position).getmTitle());

@@ -1,5 +1,8 @@
 package com.example.pmsumail.model.requestbody;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+
 import java.util.Date;
 
 public class MessageCreateRequestBody {
@@ -11,6 +14,9 @@ public class MessageCreateRequestBody {
     private String subject;
     private String content;
     private Double messageTag;
+    @SerializedName("unread")
+    @Expose
+    private boolean messageRead;
 
     public String getFrom() {
         return from;
@@ -74,5 +80,13 @@ public class MessageCreateRequestBody {
 
     public void setMessageTag(Double messageTag) {
         this.messageTag = messageTag;
+    }
+
+    public boolean isMessageRead() {
+        return messageRead;
+    }
+
+    public void setMessageRead(boolean messageRead) {
+        this.messageRead = messageRead;
     }
 }

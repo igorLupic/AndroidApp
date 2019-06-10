@@ -42,6 +42,9 @@ public class Message implements Parcelable {
     @SerializedName("attachments")
     @Expose
     private ArrayList<Attachment> attachments;
+    @SerializedName("unread")
+    @Expose
+    private boolean messageRead;
     @SerializedName("tags")
     @Expose
     private ArrayList<Tag> tags;
@@ -49,7 +52,7 @@ public class Message implements Parcelable {
     public Message() {
     }
 
-    public Message(int id, String from, String to, String cc, String bcc, Account account,  Date dateTime, String subject, String content, ArrayList<Attachment> attachments, ArrayList<Tag> tags) {
+    public Message(int id, String from, String to, String cc, String bcc, Account account, Date dateTime, String subject, String content, ArrayList<Attachment> attachments, ArrayList<Tag> tags) {
         this.id = id;
         this.from = from;
         this.to = to;
@@ -74,6 +77,14 @@ public class Message implements Parcelable {
         this.content = content;
         this.attachments = attachments;
         this.tags = tags;
+    }
+
+    public boolean isMessageRead() {
+        return messageRead;
+    }
+
+    public void setMessageRead(boolean messageRead) {
+        this.messageRead = messageRead;
     }
 
     public int getId() {
@@ -180,6 +191,7 @@ public class Message implements Parcelable {
         dest.writeSerializable(this.account);
         dest.writeLong(this.dateTime != null ? this.dateTime.getTime() : -1);
         dest.writeString(this.subject);
+        //dest.writeByte((byte) (messageRead ? 1 : 0));
         dest.writeString(this.content);
         dest.writeList(this.attachments);
         dest.writeList(this.tags);
@@ -196,6 +208,7 @@ public class Message implements Parcelable {
         this.dateTime = tmpDateTime == -1 ? null : new Date(tmpDateTime);
         this.subject = in.readString();
         this.content = in.readString();
+        //this.messageRead = in.readByte() != 0;
         this.attachments = new ArrayList<Attachment>();
         in.readList(this.attachments, Attachment.class.getClassLoader());
         this.tags = new ArrayList<Tag>();

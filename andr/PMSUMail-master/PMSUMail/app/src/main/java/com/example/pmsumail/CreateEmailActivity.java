@@ -1,13 +1,12 @@
 package com.example.pmsumail;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -27,6 +26,8 @@ import retrofit2.Response;
 
 public class CreateEmailActivity extends AppCompatActivity {
 
+
+
     private Toolbar toolbar;
     private TextView toolbarText;
     private ImageView btnSend;
@@ -36,22 +37,25 @@ public class CreateEmailActivity extends AppCompatActivity {
     private MessageService messageService;
     private static Tag tagBody = new Tag();
     private static Message messageBody;
-    private Button buttonSend;
 
-    private EditText sendTo;
+    private EditText to;
     private EditText subject;
-    private EditText ccEdit;
-    private EditText tagCreate;
-    private EditText contentEdit;
+    private EditText cc;
+    private EditText bcc;
+    private EditText content;
     private SharedPreferences sharedPreferences;
 
     public CreateEmailActivity() {
     }
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_email);
+
+        Toolbar toolbar = findViewById(R.id.toolbar);
+
         messageService = ServiceUtils.messageService;
         initView();
 
@@ -60,18 +64,19 @@ public class CreateEmailActivity extends AppCompatActivity {
     }
 
 
+
+
     private void initView() {
-        sendTo = findViewById(R.id.send_to);
+        to = findViewById(R.id.send_to);
         subject = findViewById(R.id.subject);
-        ccEdit = findViewById(R.id.cc_edit);
-        tagCreate = findViewById(R.id.tagCreate);
-        contentEdit = findViewById(R.id.content_edit);
+        cc = findViewById(R.id.cc_edit);
+        bcc = findViewById(R.id.bcc);
+        content = findViewById(R.id.content_edit);
 
         toolbar = findViewById(R.id.toolbar);
         btnSend = findViewById(R.id.button_one);
         btnCancel = findViewById(R.id.button_two);
         toolbarText = findViewById(R.id.toolbar_text);
-        buttonSend = findViewById(R.id.button_send);
         sharedPreferences = getSharedPreferences(LoginActivity.MyPres, Context.MODE_PRIVATE);
 
         btnSend.setImageDrawable(getResources().getDrawable(R.drawable.ic_send));
@@ -82,21 +87,36 @@ public class CreateEmailActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 MessageCreateRequestBody messageCreateRequestBody = new MessageCreateRequestBody();
-                messageCreateRequestBody.setBcc(ccEdit.getText().toString());
-                messageCreateRequestBody.setCc(ccEdit.getText().toString());
-                messageCreateRequestBody.setContent(contentEdit.getText().toString());
-                messageCreateRequestBody.setSubject(subject.getText().toString());
-                messageCreateRequestBody.setFrom(sharedPreferences.getString(LoginActivity.Username, "User"));
-                messageCreateRequestBody.setMessageTag(22.2);
-                messageCreateRequestBody.setDateTime(new Date());
-                messageCreateRequestBody.setTo(sendTo.getText().toString());
+
+
+                if(bcc.getText().toString() == null || bcc.getText().toString().length() == 0  ||  cc.getText().toString() == null || cc.getText().toString().length() == 0
+                || content.getText().toString() == null || content.getText().toString().length() == 0  || subject.getText().toString() == null || subject.getText().toString().length() == 0
+                || to.getText().toString() == null || to.getText().toString().length() == 0  ){
+
+                    Toast.makeText(CreateEmailActivity.this, "Fields can not be empty", Toast.LENGTH_LONG).show();
+                    return;
+
+                }else{
+                    messageCreateRequestBody.setBcc(bcc.getText().toString());
+                    messageCreateRequestBody.setCc(cc.getText().toString());
+                    messageCreateRequestBody.setContent(content.getText().toString());
+                    messageCreateRequestBody.setSubject(subject.getText().toString());
+                    messageCreateRequestBody.setTo(to.getText().toString());
+
+                    messageCreateRequestBody.setFrom(sharedPreferences.getString(LoginActivity.Username, "User"));
+                    messageCreateRequestBody.setDateTime(new Date());
+                    messageCreateRequestBody.setMessageTag(21.2);
+                    messageCreateRequestBody.setMessageRead(false);
+                }
 
 
                 Call<Message> call = messageService.createMessage(messageCreateRequestBody);
                 call.enqueue(new Callback<Message>() {
                     @Override
                     public void onResponse(Call<Message> call, Response<Message> response) {
-                        Log.e("test", "test");
+                        Toast.makeText(CreateEmailActivity.this, "Successful", Toast.LENGTH_SHORT).show();
+                        Intent i = new Intent(CreateEmailActivity.this, EmailsActivity.class);
+                        startActivity(i);
                     }
 
                     @Override
@@ -107,7 +127,24 @@ public class CreateEmailActivity extends AppCompatActivity {
             }
         });
 
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+
+                Toast.makeText(CreateEmailActivity.this, "Cancel", Toast.LENGTH_SHORT).show();
+                Intent i = new Intent(CreateEmailActivity.this, CreateEmailActivity.class);
+                startActivity(i);
+
+            }
+
+        });
+
+
+
     }
+
+
 
     @Override
     protected void onStart() {

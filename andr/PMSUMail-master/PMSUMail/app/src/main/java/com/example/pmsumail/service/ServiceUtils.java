@@ -25,6 +25,7 @@ public class ServiceUtils {
     public static final String SORTMESSAGESDESC = "messages/orderDesc";
     public static final String MESSAGEID = "messages/{id}";
     public static final String MESSAGEDELETE = "messages/delete/{id}";
+    public static final String MESSAGEREAD = "messages/edit";
 
 
     public static OkHttpClient test(){

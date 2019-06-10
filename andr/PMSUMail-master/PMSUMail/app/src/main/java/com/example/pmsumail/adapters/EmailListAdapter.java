@@ -1,6 +1,7 @@
 package com.example.pmsumail.adapters;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,7 +38,7 @@ public class EmailListAdapter extends ArrayAdapter<Message> {
         email_context_view.setText(message.getContent());
 
         email_from_view.setText(message.getFrom());
-
+        if(!message.isMessageRead())view.setBackgroundColor(Color.GRAY);
 
         SimpleDateFormat simpleDate =  new SimpleDateFormat("dd/MM/yyyy");
         String date = simpleDate.format(message.getDateTime());
